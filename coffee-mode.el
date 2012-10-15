@@ -147,7 +147,7 @@
   "A CoffeeScript major mode."
   :group 'languages)
 
-(defcustom coffee-tab-width tab-width
+(defcustom coffee-basic-indent 2
   "The tab width to use when indenting."
   :type 'integer
   :group 'coffee)
@@ -192,10 +192,6 @@ with CoffeeScript."
 
 (defcustom coffee-mode-hook nil
   "Hook called by `coffee-mode'.  Examples:
-
-      ;; CoffeeScript uses two spaces.
-      (make-local-variable 'tab-width)
-      (set 'tab-width 2)
 
       ;; If you don't want your compiled files to be wrapped
       (setq coffee-args-compile '(\"-c\" \"--bare\"))
@@ -549,19 +545,18 @@ output in a compilation buffer."
   (interactive)
 
   (if (= (point) (point-at-bol))
-      (insert-tab)
+      (indent-to coffee-basic-indent)
     (save-excursion
-      (let ((prev-indent (coffee-previous-indent))
-            (cur-indent (current-indentation)))
+      (let ((prev-indent (coffee-previous-indent)))
         ;; Shift one column to the left
         (beginning-of-line)
-        (insert-tab)
+        (indent-to coffee-basic-indent)
 
         (when (= (point-at-bol) (point))
-          (forward-char coffee-tab-width))
+          (forward-char coffee-basic-indent))
 
         ;; We're too far, remove all indentation.
-        (when (> (- (current-indentation) prev-indent) coffee-tab-width)
+        (when (> (- (current-indentation) prev-indent) coffee-basic-indent)
           (backward-to-indentation 0)
           (delete-region (point-at-bol) (point)))))))
 
@@ -582,14 +577,12 @@ output in a compilation buffer."
   ;; Remember the current line indentation level,
   ;; insert a newline, and indent the newline to the same
   ;; level as the previous line.
-  (let ((prev-indent (current-indentation)) (indent-next nil))
+  (let ((prev-indent (current-indentation)))
     (delete-horizontal-space t)
     (newline)
-    (insert-tab (/ prev-indent coffee-tab-width))
-
-    ;; We need to insert an additional tab because the last line was special.
-    (when (coffee-line-wants-indent)
-      (insert-tab)))
+    (indent-to (+ prev-indent (if (coffee-line-wants-indent)
+                                  coffee-basic-indent
+                                0))))
 
   ;; Last line was a comment so this one should probably be,
   ;; too. Makes it easy to write multi-line comments (like the one I'm
@@ -598,7 +591,7 @@ output in a compilation buffer."
     (insert "# ")))
 
 (defun coffee-dedent-line-backspace (arg)
-  "Unindent to increment of `coffee-tab-width' with ARG==1 when
+  "Unindent to increment of `coffee-basic-indent' with ARG==1 when
 called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
@@ -608,10 +601,10 @@ Delete ARG spaces if ARG!=1."
                         (back-to-indentation)
                         (point)))
            (not (bolp)))
-      (let ((extra-space-count (% (current-column) coffee-tab-width)))
+      (let ((extra-space-count (% (current-column) coffee-basic-indent)))
         (backward-delete-char-untabify
          (if (zerop extra-space-count)
-             coffee-tab-width
+             coffee-basic-indent
            extra-space-count)))
     (backward-delete-char-untabify arg)))
 
@@ -755,10 +748,11 @@ previous line."
   ;;          (2 (coffee-quote-syntax 2))
   ;;          (3 (coffee-quote-syntax 3)))))
 
-  ;; indentation
+  ;; indentation -- for those who want to use tabs to indent, set tab-width
+  ;; appropriately.
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'coffee-indent-line)
-  (set (make-local-variable 'tab-width) coffee-tab-width)
+  (set (make-local-variable 'tab-width) coffee-basic-indent)
 
   ;; imenu
   (make-local-variable 'imenu-create-index-function)
