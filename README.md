@@ -1,4 +1,4 @@
-CoffeeScript Major Mode
+CoffeeScript Major Mode  [![Build Status](https://travis-ci.org/lewang/coffee-mode.png)](http://travis-ci.org/lewang/coffee-mode)
 =======================
 
 An Emacs major mode for [CoffeeScript][cs] and [IcedCoffeeScript][ics],
