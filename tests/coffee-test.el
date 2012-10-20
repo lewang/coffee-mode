@@ -20,16 +20,102 @@
     (coffee-mode)
     ,@body))
 
+(defun test-press-key (key-string)
+  (let* ((key (read-kbd-macro key-string)))
+    (execute-kbd-macro key)))
 
-(ert-deftest coffee-test-basic-indent ()
+(ert-deftest coffee-test-indent-basic ()
   "Basic indentation.
 
 Press TAB rotates through valid indentation points."
   (coffee-test-with-common-setup
-   (insert "blah = 1")
-   (execute-kbd-macro (read-kbd-macro "TAB"))
-   (should (string-equal (buffer-string) "  blah = 1"))
-   (execute-kbd-macro (read-kbd-macro "TAB"))
-   (should (string-equal (buffer-string) "blah = 1"))
-   (execute-kbd-macro (read-kbd-macro "TAB"))
-   (should (string-equal (buffer-string) "  blah = 1"))))
+   (insert "
+blah = ->
+func()")
+   (test-press-key "TAB")
+   (should (string-equal "
+blah = ->
+  func()"
+                         (buffer-string)))))
+
+(ert-deftest coffee-test-indent-2-level-1 ()
+  "Rotate through valid indents."
+  (coffee-test-with-common-setup
+    (insert "
+blah = ->
+  if 1 == 1
+  func()")
+    (test-press-key "TAB")
+    (should (string-equal "
+blah = ->
+  if 1 == 1
+    func()"
+                         (buffer-string))))
+  (coffee-test-with-common-setup
+    (insert "
+blah = ->
+  if 1 == 1
+  func()")
+    (test-press-key "TAB TAB")
+    (should (string-equal "
+blah = ->
+  if 1 == 1
+  func()"
+                          (buffer-string))))
+  (coffee-test-with-common-setup
+    (insert "
+blah = ->
+  if 1 == 1
+  func()")
+    (test-press-key "TAB TAB TAB")
+    (should (string-equal "
+blah = ->
+  if 1 == 1
+func()"
+                          (buffer-string)))))
+
+(ert-deftest coffee-newline-and-indent ()
+  " `coffee-newline-and-indent' works as expected."
+  (coffee-test-with-common-setup
+   (insert "
+blah = ->")
+   (test-press-key "C-j")
+   (should (string-equal "
+blah = ->
+  "
+                         (buffer-string)))))
+
+(ert-deftest coffee-dedent-basic ()
+  " `coffee-dedent-line-backspace' works as expected."
+  (coffee-test-with-common-setup
+   (insert "
+blah = ->
+  ")
+   (test-press-key "DEL")
+   (should (string-equal "
+blah = ->
+"
+                         (buffer-string)))))
+
+(ert-deftest coffee-dedent-from-bol ()
+  " `coffee-dedent-line-backspace' from BOL deletes backwards one char."
+  (coffee-test-with-common-setup
+   (insert "
+blah = ->
+")
+   (test-press-key "DEL")
+   (should (string-equal "
+blah = ->"
+                         (buffer-string)))))
+
+(ert-deftest coffee-dedent-from-jagged ()
+  " `coffee-dedent-line-backspace' respects increments of `coffee-basic-indent' ."
+  (coffee-test-with-common-setup
+   (insert "
+blah = ->
+   ")
+   (test-press-key "DEL")
+   (should (string-equal "
+blah = ->
+  "
+                         (buffer-string)))))
