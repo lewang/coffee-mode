@@ -563,12 +563,10 @@ output in a compilation buffer."
 (defun coffee-previous-indent ()
   "Return the indentation level of the previous non-blank line."
   (save-excursion
-    (forward-line -1)
+    (skip-chars-backward " \t\n")
     (if (bobp)
         0
-      (progn
-        (while (and (looking-at "^[ \t]*$") (not (bobp))) (forward-line -1))
-        (current-indentation)))))
+      (current-indentation))))
 
 (defun coffee-newline-and-indent ()
   "Insert a newline and indent it to the same level as the previous line."
