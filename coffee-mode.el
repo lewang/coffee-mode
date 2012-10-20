@@ -538,35 +538,49 @@ output in a compilation buffer."
 ;; Indentation
 ;;
 
+(defun coffee-current-valid-indents ()
+  "Return list of column numbers which are valid indents for current line.
+
+List is in descending order."
+  (let ((wants-indent (coffee-line-wants-indent))
+        (previous-indent (coffee-previous-indent)))
+    (nconc (when wants-indent (list (+ previous-indent coffee-basic-indent)))
+           (number-sequence previous-indent 0 (- coffee-basic-indent)))))
+
 ;;; The theory is explained in the README.
 
 (defun coffee-indent-line ()
   "Indent current line as CoffeeScript."
   (interactive)
-
-  (if (= (point) (point-at-bol))
-      (indent-to coffee-basic-indent)
+  (let ((current-indent (current-indentation))
+        (valid-indents (coffee-current-valid-indents)))
     (save-excursion
-      (let ((prev-indent (coffee-previous-indent)))
-        ;; Shift one column to the left
-        (beginning-of-line)
-        (indent-to coffee-basic-indent)
-
-        (when (= (point-at-bol) (point))
-          (forward-char coffee-basic-indent))
-
-        ;; We're too far, remove all indentation.
-        (when (> (- (current-indentation) prev-indent) coffee-basic-indent)
-          (backward-to-indentation 0)
-          (delete-region (point-at-bol) (point)))))))
+      ;; goals:
+      ;; 1. first invocation moves to "correct" column
+      ;; 2. move line to new valid column with every invocation
+      (indent-line-to (if (and (or (not (eq this-command last-command))
+                                   (zerop current-indent))
+                               (not (= current-indent (car valid-indents))))
+                          (car valid-indents)
+                        (dolist (i valid-indents 0)
+                          (if (< i current-indent)
+                              (return i))))))
+    (when (< (current-column) (current-indentation))
+      (back-to-indentation))))
 
 (defun coffee-previous-indent ()
-  "Return the indentation level of the previous non-blank line."
+  "Return the indentation level of the previous non-blank line,
+  rounding up to increments of `coffee-basic-indent' "
   (save-excursion
+    (goto-char (point-at-bol))
     (skip-chars-backward " \t\n")
-    (if (bobp)
-        0
-      (current-indentation))))
+    (let ((indent (if (bobp)
+                      0
+                    (current-indentation))))
+      (* coffee-basic-indent
+         (ceiling
+          (/ indent
+             (float coffee-basic-indent)))))))
 
 (defun coffee-newline-and-indent ()
   "Insert a newline and indent it to the same level as the previous line."
@@ -629,7 +643,7 @@ previous line."
   (interactive)
 
   (save-excursion
-    (let ((indenter-at-bol) (indenter-at-eol))
+    (let (indenter-at-bol indenter-at-eol)
       ;; Go back a line and to the first character.
       (forward-line -1)
       (backward-to-indentation 0)
