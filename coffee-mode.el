@@ -547,6 +547,11 @@ List is in descending order."
     (nconc (when wants-indent (list (+ previous-indent coffee-basic-indent)))
            (number-sequence previous-indent 0 (- coffee-basic-indent)))))
 
+(defun coffee-line-indentable ()
+  (save-excursion
+    (back-to-indentation)
+    (not (eq 'string (syntax-ppss-context (syntax-ppss))))))
+
 ;;; The theory is explained in the README.
 
 (defun coffee-indent-line ()
@@ -608,11 +613,13 @@ called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
   (interactive "*p")
+""
   (if (and (= 1 arg)
            (= (point) (save-excursion
                         (back-to-indentation)
                         (point)))
-           (not (bolp)))
+           (not (bolp))
+           (coffee-line-indentable))
       (let ((extra-space-count (% (current-column) coffee-basic-indent)))
         (backward-delete-char-untabify
          (if (zerop extra-space-count)

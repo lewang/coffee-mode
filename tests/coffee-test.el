@@ -119,3 +119,16 @@ blah = ->
 blah = ->
   "
                          (buffer-string)))))
+
+(ert-deftest coffee-dedent-in-string ()
+  "dedent works as BACKSPACE in string."
+  (coffee-test-with-common-setup
+    (insert "\"
+blah = ->
+    \"")
+    (backward-char)
+    (test-press-key "DEL")
+    (should (string-equal "\"
+blah = ->
+   \""
+                          (buffer-string)))))
