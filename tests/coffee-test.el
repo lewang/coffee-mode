@@ -38,7 +38,7 @@ blah = ->
   func()"
                          (buffer-string)))))
 
-(ert-deftest coffee-test-indent-2-level-1 ()
+(ert-deftest coffee-test-indent-2-level ()
   "Rotate through valid indents."
   (coffee-test-with-common-setup
     (insert "
