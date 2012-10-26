@@ -219,7 +219,7 @@ with CoffeeScript."
     (define-key map [remap newline-and-indent] 'coffee-newline-and-indent)
     (define-key map "\C-m" 'coffee-newline-and-indent)
     (define-key map "\C-c\C-o\C-s" 'coffee-cos-mode)
-    (define-key map "\177" 'coffee-dedent-line-backspace)
+    (define-key map "\177" 'coffee-backspace)
     map)
   "Keymap for CoffeeScript major mode.")
 
@@ -606,13 +606,12 @@ List is in descending order."
   (when (coffee-previous-line-is-comment)
     (insert "# ")))
 
-(defun coffee-dedent-line-backspace (arg)
+(defun coffee-backspace (arg)
   "Unindent to increment of `coffee-basic-indent' with ARG==1 when
 called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
   (interactive "*p")
-""
   (if (and (= 1 arg)
            (= (point) (save-excursion
                         (back-to-indentation)
