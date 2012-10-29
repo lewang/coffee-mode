@@ -217,9 +217,9 @@ with CoffeeScript."
     (define-key map (kbd "A-M-r") 'coffee-repl)
     (define-key map [remap comment-dwim] 'coffee-comment-dwim)
     (define-key map [remap newline-and-indent] 'coffee-newline-and-indent)
-    (define-key map "\C-m" 'coffee-newline-and-indent)
-    (define-key map "\C-c\C-o\C-s" 'coffee-cos-mode)
-    (define-key map "\177" 'coffee-backspace)
+    (define-key map (kbd "RET") 'coffee-newline-and-indent)
+    (define-key map (kbd "C-c C-o C-s") 'coffee-cos-mode)
+    (define-key map (kbd "DEL") 'coffee-backspace)
     map)
   "Keymap for CoffeeScript major mode.")
 
