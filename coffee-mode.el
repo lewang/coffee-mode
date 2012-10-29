@@ -220,6 +220,7 @@ with CoffeeScript."
     (define-key map (kbd "RET") 'coffee-newline-and-indent)
     (define-key map (kbd "C-c C-o C-s") 'coffee-cos-mode)
     (define-key map (kbd "DEL") 'coffee-backspace)
+    (define-key map (kbd "SPC") 'coffee-space)
     map)
   "Keymap for CoffeeScript major mode.")
 
@@ -624,6 +625,31 @@ Delete ARG spaces if ARG!=1."
              coffee-basic-indent
            extra-space-count)))
     (backward-delete-char-untabify arg)))
+
+(defun coffee-space (arg)
+  "Indent to increment of `coffee-basic-indent' with ARG==1 when
+called from first non-blank char of line.
+
+Insert ARG spaces if ARG!=1."
+  (interactive "*p")
+  (if (and (= 1 arg)
+           (= (point) (save-excursion
+                        (back-to-indentation)
+                        (point)))
+           (not (bolp))
+           (coffee-line-indentable))
+      (let* ((current-column (current-column))
+             (missing-spaces-count
+              (let ((jagged (% current-column coffee-basic-indent)))
+                (if (zerop jagged)
+                    0
+                  (- coffee-basic-indent jagged)))))
+        (indent-to-column
+         (+ current-column
+            (if (zerop missing-spaces-count)
+                coffee-basic-indent
+              missing-spaces-count))))
+    (funcall 'insert (make-string arg ? ))))
 
 ;; Indenters help determine whether the current line should be
 ;; indented further based on the content of the previous line. If a
