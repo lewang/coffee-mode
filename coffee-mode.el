@@ -594,7 +594,9 @@ List is in descending order."
   ;; Remember the current line indentation level,
   ;; insert a newline, and indent the newline to the same
   ;; level as the previous line.
-  (let ((prev-indent (current-indentation)))
+  (let ((prev-indent (save-excursion
+                       (forward-line 1)
+                       (coffee-previous-indent))))
     (delete-horizontal-space t)
     (newline)
     (indent-to (+ prev-indent (if (coffee-line-wants-indent)
