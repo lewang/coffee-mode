@@ -552,6 +552,30 @@ List is in descending order."
     (back-to-indentation)
     (not (eq 'string (syntax-ppss-context (syntax-ppss))))))
 
+(defun coffee-line-is-blank ()
+  (save-excursion
+    (forward-line 0)
+    (skip-chars-forward " \t" (point-at-eol))
+    (= (point) (point-at-eol))))
+
+(defun coffee-point-in-indentation ()
+  (save-excursion
+    (skip-chars-forward " \t" (point-at-eol))
+    (= (point) (progn (forward-line 0)
+                      (skip-chars-forward " \t")
+                      (point)))))
+
+(defun coffee-space-should-indent ()
+  (= 1 arg)
+  (coffee-line-indentable)
+  (coffee-point-in-indentation)
+  (if (coffee-line-is-blank)
+      (progn
+        (delete-char (- (skip-chars-forward " \t" (point-at-eol))))
+        t)
+    (back-to-indentation)
+    t))
+
 ;;; The theory is explained in the README.
 
 (defun coffee-indent-line ()
@@ -615,12 +639,8 @@ called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
   (interactive "*p")
-  (if (and (= 1 arg)
-           (= (point) (save-excursion
-                        (back-to-indentation)
-                        (point)))
-           (not (bolp))
-           (coffee-line-indentable))
+  (if (and (coffee-space-should-indent)
+           (not (bolp)))
       (let ((extra-space-count (% (current-column) coffee-basic-indent)))
         (backward-delete-char-untabify
          (if (zerop extra-space-count)
@@ -634,12 +654,7 @@ called from first non-blank char of line.
 
 Insert ARG spaces if ARG!=1."
   (interactive "*p")
-  (if (and (= 1 arg)
-           (= (point) (save-excursion
-                        (back-to-indentation)
-                        (point)))
-           (not (bolp))
-           (coffee-line-indentable))
+  (if (coffee-space-should-indent)
       (let* ((current-column (current-column))
              (missing-spaces-count
               (let ((jagged (% current-column coffee-basic-indent)))
