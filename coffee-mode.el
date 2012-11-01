@@ -147,7 +147,7 @@
   "A CoffeeScript major mode."
   :group 'languages)
 
-(defcustom coffee-basic-indent 2
+(defcustom coffee-tab-width 2
   "The tab width to use when indenting."
   :type 'integer
   :group 'coffee)
@@ -548,14 +548,14 @@ List is in descending order."
     (destructuring-bind (pre-list sequence-start)
         (if wants-indent
             (list
-             (list (+ previous-indent coffee-basic-indent))
+             (list (+ previous-indent coffee-tab-width))
              previous-indent)
           (list
            (list previous-indent
-                 (+ previous-indent coffee-basic-indent))
-           (- previous-indent coffee-basic-indent)))
+                 (+ previous-indent coffee-tab-width))
+           (- previous-indent coffee-tab-width)))
       (nconc pre-list
-             (number-sequence sequence-start 0 (- coffee-basic-indent))))))
+             (number-sequence sequence-start 0 (- coffee-tab-width))))))
 
 (defun coffee-line-indentable ()
   (save-excursion
@@ -609,17 +609,17 @@ List is in descending order."
 
 (defun coffee-previous-indent ()
   "Return the indentation level of the previous non-blank line,
-  rounding up to increments of `coffee-basic-indent' "
+  rounding up to increments of `coffee-tab-width' "
   (save-excursion
     (goto-char (point-at-bol))
     (skip-chars-backward " \t\n")
     (let ((indent (if (bobp)
                       0
                     (current-indentation))))
-      (* coffee-basic-indent
+      (* coffee-tab-width
          (ceiling
           (/ indent
-             (float coffee-basic-indent)))))))
+             (float coffee-tab-width)))))))
 
 (defun coffee-newline-and-indent ()
   "Insert a newline and indent it appropriately."
@@ -636,7 +636,7 @@ List is in descending order."
     (indent-to (or new-indent
                    (+ last-line-indent
                       (if (coffee-line-wants-indent)
-                          coffee-basic-indent
+                          coffee-tab-width
                         0)))))
 
   ;; Last line was a comment so this one should probably be,
@@ -646,22 +646,22 @@ List is in descending order."
     (insert "# ")))
 
 (defun coffee-backspace (arg)
-  "Unindent to increment of `coffee-basic-indent' with ARG==1 when
+  "Unindent to increment of `coffee-tab-width' with ARG==1 when
 called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
   (interactive "*p")
   (if (and (coffee-space-should-indent arg)
            (not (bolp)))
-      (let ((extra-space-count (% (current-column) coffee-basic-indent)))
+      (let ((extra-space-count (% (current-column) coffee-tab-width)))
         (backward-delete-char-untabify
          (if (zerop extra-space-count)
-             coffee-basic-indent
+             coffee-tab-width
            extra-space-count)))
     (backward-delete-char-untabify arg)))
 
 (defun coffee-space (arg)
-  "Indent to increment of `coffee-basic-indent' with ARG==1 when
+  "Indent to increment of `coffee-tab-width' with ARG==1 when
 called from first non-blank char of line.
 
 Insert ARG spaces if ARG!=1."
@@ -669,14 +669,14 @@ Insert ARG spaces if ARG!=1."
   (if (coffee-space-should-indent arg)
       (let* ((current-column (current-column))
              (missing-spaces-count
-              (let ((jagged (% current-column coffee-basic-indent)))
+              (let ((jagged (% current-column coffee-tab-width)))
                 (if (zerop jagged)
                     0
-                  (- coffee-basic-indent jagged)))))
+                  (- coffee-tab-width jagged)))))
         (indent-to-column
          (+ current-column
             (if (zerop missing-spaces-count)
-                coffee-basic-indent
+                coffee-tab-width
               missing-spaces-count))))
     (funcall 'insert (make-string arg ? ))))
 
@@ -804,7 +804,7 @@ previous line."
   ;; appropriately.
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'coffee-indent-line)
-  (set (make-local-variable 'tab-width) coffee-basic-indent)
+  (set (make-local-variable 'tab-width) coffee-tab-width)
 
   ;; imenu
   (make-local-variable 'imenu-create-index-function)
