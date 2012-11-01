@@ -538,14 +538,24 @@ output in a compilation buffer."
 ;; Indentation
 ;;
 
-(defun coffee-current-valid-indents ()
+(defun coffee-valid-indents ()
   "Return list of column numbers which are valid indents for current line.
 
 List is in descending order."
   (let ((wants-indent (coffee-line-wants-indent))
-        (previous-indent (coffee-previous-indent)))
-    (nconc (when wants-indent (list (+ previous-indent coffee-basic-indent)))
-           (number-sequence previous-indent 0 (- coffee-basic-indent)))))
+        (previous-indent (coffee-previous-indent))
+        sequence-start)
+    (destructuring-bind (pre-list sequence-start)
+        (if wants-indent
+            (list
+             (list (+ previous-indent coffee-basic-indent))
+             previous-indent)
+          (list
+           (list previous-indent
+                 (+ previous-indent coffee-basic-indent))
+           (- previous-indent coffee-basic-indent)))
+      (nconc pre-list
+             (number-sequence sequence-start 0 (- coffee-basic-indent))))))
 
 (defun coffee-line-indentable ()
   (save-excursion
@@ -565,35 +575,35 @@ List is in descending order."
                       (skip-chars-forward " \t")
                       (point)))))
 
-(defun coffee-space-should-indent ()
-  (= 1 arg)
-  (coffee-line-indentable)
-  (coffee-point-in-indentation)
-  (if (coffee-line-is-blank)
-      (progn
-        (delete-char (- (skip-chars-forward " \t" (point-at-eol))))
-        t)
-    (back-to-indentation)
-    t))
+(defun coffee-space-should-indent (arg)
+  (and (= 1 arg)
+       (coffee-line-indentable)
+       (coffee-point-in-indentation)
+       (if (coffee-line-is-blank)
+           (progn
+             (delete-char (- (skip-chars-forward " \t" (point-at-eol))))
+             t)
+         (back-to-indentation)
+         t)))
 
 ;;; The theory is explained in the README.
 
 (defun coffee-indent-line ()
   "Indent current line as CoffeeScript."
   (interactive)
-  (let ((current-indent (current-indentation))
-        (valid-indents (coffee-current-valid-indents)))
+  (let* ((current-indent (current-indentation))
+         (valid-indents (coffee-valid-indents))
+         (next-indents (cdr (memq current-indent valid-indents))))
     (save-excursion
       ;; goals:
       ;; 1. first invocation moves to "correct" column
       ;; 2. move line to new valid column with every invocation
       (indent-line-to (if (and (or (not (eq this-command last-command))
-                                   (zerop current-indent))
+                                   (zerop current-indent)
+                                   (null next-indents))
                                (not (= current-indent (car valid-indents))))
                           (car valid-indents)
-                        (dolist (i valid-indents 0)
-                          (if (< i current-indent)
-                              (return i))))))
+                        (car next-indents))))
     (when (< (current-column) (current-indentation))
       (back-to-indentation))))
 
@@ -612,20 +622,22 @@ List is in descending order."
              (float coffee-basic-indent)))))))
 
 (defun coffee-newline-and-indent ()
-  "Insert a newline and indent it to the same level as the previous line."
+  "Insert a newline and indent it appropriately."
   (interactive)
 
-  ;; Remember the current line indentation level,
-  ;; insert a newline, and indent the newline to the same
-  ;; level as the previous line.
-  (let ((prev-indent (save-excursion
-                       (forward-line 1)
-                       (coffee-previous-indent))))
+  (let* ((last-line-was-blank (coffee-line-is-blank))
+         (last-line-indent (if last-line-was-blank
+                               (current-column)
+                             (current-indentation)))
+         (new-indent (when last-line-was-blank
+                       last-line-indent)))
     (delete-horizontal-space t)
     (newline)
-    (indent-to (+ prev-indent (if (coffee-line-wants-indent)
-                                  coffee-basic-indent
-                                0))))
+    (indent-to (or new-indent
+                   (+ last-line-indent
+                      (if (coffee-line-wants-indent)
+                          coffee-basic-indent
+                        0)))))
 
   ;; Last line was a comment so this one should probably be,
   ;; too. Makes it easy to write multi-line comments (like the one I'm
@@ -639,7 +651,7 @@ called from first non-blank char of line.
 
 Delete ARG spaces if ARG!=1."
   (interactive "*p")
-  (if (and (coffee-space-should-indent)
+  (if (and (coffee-space-should-indent arg)
            (not (bolp)))
       (let ((extra-space-count (% (current-column) coffee-basic-indent)))
         (backward-delete-char-untabify
@@ -654,7 +666,7 @@ called from first non-blank char of line.
 
 Insert ARG spaces if ARG!=1."
   (interactive "*p")
-  (if (coffee-space-should-indent)
+  (if (coffee-space-should-indent arg)
       (let* ((current-column (current-column))
              (missing-spaces-count
               (let ((jagged (% current-column coffee-basic-indent)))
