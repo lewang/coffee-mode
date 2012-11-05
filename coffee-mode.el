@@ -625,16 +625,18 @@ List is in descending order."
   "Insert a newline and indent it appropriately."
   (interactive)
 
-  (let* ((last-line-was-blank (coffee-line-is-blank))
-         (last-line-indent (if last-line-was-blank
+  (let* ((prev-was-blank (coffee-line-is-blank))
+         (prev-indent (if prev-was-blank
                                (current-column)
                              (current-indentation)))
-         (new-indent (when last-line-was-blank
-                       last-line-indent)))
-    (delete-horizontal-space t)
+         (point-in-indentation (and (not prev-was-blank)
+                                    (<= (point) (+ (point-at-bol) prev-indent))))
+         (new-indent (when (or prev-was-blank point-in-indentation)
+                       prev-indent)))
+    (delete-horizontal-space)
     (newline)
     (indent-to (or new-indent
-                   (+ last-line-indent
+                   (+ prev-indent
                       (if (coffee-line-wants-indent)
                           coffee-tab-width
                         0)))))
