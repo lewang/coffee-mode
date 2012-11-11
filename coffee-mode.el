@@ -420,7 +420,14 @@ For details, see `comment-dwim'."
   (interactive "*P")
   (require 'newcomment)
   (let ((deactivate-mark nil))
-    (comment-dwim arg)))
+    (if (and (not (use-region-p))
+             (coffee-line-is-blank))
+        (let ((indent (save-excursion
+                        (skip-chars-forward " \t\n")
+                        (current-indentation))))
+          (delete-horizontal-space)
+          (insert (make-string indent ? ) comment-start))
+      (comment-dwim arg))))
 
 (defun coffee-command-compile (file-name)
   "Run `coffee-command' to compile FILE."
@@ -794,7 +801,7 @@ previous line."
   (modify-syntax-entry ?# "< b" coffee-mode-syntax-table)
   (modify-syntax-entry ?\n "> b" coffee-mode-syntax-table)
   (make-local-variable 'comment-start)
-  (setq comment-start "#")
+  (setq comment-start "# ")
 
   ;; single quote strings
   (modify-syntax-entry ?' "\"" coffee-mode-syntax-table)
