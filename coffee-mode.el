@@ -209,6 +209,9 @@ with CoffeeScript."
   :type 'hook
   :group 'coffee)
 
+(defvar coffee-indent-happened nil)
+(make-variable-buffer-local 'coffee-indent-happened)
+
 (defvar coffee-mode-map
   (let ((map (make-sparse-keymap)))
     ;; key bindings
@@ -605,7 +608,8 @@ List is in descending order."
                           (car valid-indents)
                         (car next-indents))))
     (when (< (current-column) (current-indentation))
-      (back-to-indentation))))
+      (back-to-indentation))
+    (setq coffee-indent-happened t)))
 
 (defun coffee-previous-indent ()
   "Return the indentation level of the previous non-blank line,
@@ -768,6 +772,9 @@ previous line."
 ;;      ;; nil, which is OK.
 ;;      )))
 
+(defun coffee-post-command-function ()
+  (setq coffee-indent-happened nil))
+
 ;;
 ;; Define Major Mode
 ;;
@@ -813,7 +820,9 @@ previous line."
   (setq imenu-create-index-function 'coffee-imenu-create-index)
 
   ;; no tabs
-  (setq indent-tabs-mode nil))
+  (setq indent-tabs-mode nil)
+
+  (add-hook 'post-command-hook #'coffee-post-command-function nil t))
 
 ;;
 ;; Compile-on-Save minor mode
