@@ -416,7 +416,7 @@ called `coffee-compiled-buffer-name'."
 For details, see `comment-dwim'."
   (interactive "*P")
   (require 'newcomment)
-  (let ((deactivate-mark nil) (comment-start "#") (comment-end ""))
+  (let ((deactivate-mark nil))
     (comment-dwim arg)))
 
 (defun coffee-command-compile (file-name)
