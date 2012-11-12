@@ -423,7 +423,10 @@ For details, see `comment-dwim'."
     (if (and (not (use-region-p))
              (coffee-line-is-blank))
         (let ((indent (save-excursion
-                        (skip-chars-forward " \t\n")
+                        (progn
+                          (skip-chars-forward " \t\n")
+                          (when (eobp)
+                            (skip-chars-backward " \t\n")))
                         (current-indentation))))
           (delete-horizontal-space)
           (insert (make-string indent ? ) comment-start))
@@ -829,7 +832,7 @@ previous line."
   ;; no tabs
   (setq indent-tabs-mode nil)
 
-  (add-hook 'post-command-hook #'coffee-post-command-function nil t))
+  (add-hook 'post-command-hook #'coffee-post-command-function 'append t))
 
 ;;
 ;; Compile-on-Save minor mode
