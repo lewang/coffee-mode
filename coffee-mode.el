@@ -789,6 +789,16 @@ previous line."
 ;; Define Major Mode
 ;;
 
+(defvar coffee-syntax-table
+  (let ((st (make-syntax-table)))
+    ;; perl style comment: "# ..."
+    (modify-syntax-entry ?# "< b" st)
+    (modify-syntax-entry ?\n "> b" st)
+    ;; single quote strings
+    (modify-syntax-entry ?' "\"" st)
+    st))
+
+
 ;;;###autoload
 (define-derived-mode coffee-mode fundamental-mode
   "Coffee"
@@ -797,14 +807,9 @@ previous line."
   ;; code for syntax highlighting
   (setq font-lock-defaults '((coffee-font-lock-keywords)))
 
-  ;; perl style comment: "# ..."
-  (modify-syntax-entry ?# "< b" coffee-mode-syntax-table)
-  (modify-syntax-entry ?\n "> b" coffee-mode-syntax-table)
   (make-local-variable 'comment-start)
   (setq comment-start "# ")
 
-  ;; single quote strings
-  (modify-syntax-entry ?' "\"" coffee-mode-syntax-table)
 
   ;; (setq font-lock-syntactic-keywords
   ;;       ;; Make outer chars of matching triple-quote sequences into generic
@@ -830,6 +835,7 @@ previous line."
   (setq indent-tabs-mode nil)
 
   (add-hook 'post-command-hook #'coffee-post-command-function 'append t))
+
 
 ;;
 ;; Compile-on-Save minor mode
