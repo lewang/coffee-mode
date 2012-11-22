@@ -157,6 +157,11 @@
   :type 'string
   :group 'coffee)
 
+(defcustom coffee-js-directory ""
+  "The directory for compiled JavaScript files output"
+  :type 'string
+  :group 'coffee)
+
 (defcustom js2coffee-command "js2coffee"
   "The js2coffee command used for evaluating code."
   :type 'string
@@ -224,6 +229,8 @@ with CoffeeScript."
     (define-key map (kbd "C-c C-o C-s") 'coffee-cos-mode)
     (define-key map (kbd "DEL") 'coffee-backspace)
     (define-key map (kbd "SPC") 'coffee-space)
+    (define-key map (kbd "C-c C-<") 'coffee-indent-shift-left)
+    (define-key map (kbd "C-c C->") 'coffee-indent-shift-right)
     map)
   "Keymap for CoffeeScript major mode.")
 
@@ -244,9 +251,12 @@ with CoffeeScript."
   (pop-to-buffer "*CoffeeREPL*"))
 
 (defun coffee-compiled-file-name (&optional filename)
+  (setq working-on-file (expand-file-name (or filename (buffer-file-name))))
+  (unless (string= coffee-js-directory "")
+      (setq working-on-file (expand-file-name (concat (file-name-directory working-on-file) coffee-js-directory (file-name-nondirectory working-on-file)))))
   "Returns the name of the JavaScript file compiled from a CoffeeScript file.
 If FILENAME is omitted, the current buffer's file name is used."
-  (concat (file-name-sans-extension (or filename (buffer-file-name))) ".js"))
+  (concat (file-name-sans-extension working-on-file) ".js"))
 
 (defun coffee-compile-file ()
   "Compiles and saves the current file to disk in a file of the same
@@ -281,15 +291,18 @@ called `coffee-compiled-buffer-name'."
 
   (let ((buffer (get-buffer coffee-compiled-buffer-name)))
     (when buffer
-      (kill-buffer buffer)))
+      (with-current-buffer buffer
+        (erase-buffer))))
 
   (apply (apply-partially 'call-process-region start end coffee-command nil
                           (get-buffer-create coffee-compiled-buffer-name)
                           nil)
          (append coffee-args-compile (list "-s" "-p")))
-  (switch-to-buffer (get-buffer coffee-compiled-buffer-name))
-  (let ((buffer-file-name "tmp.js")) (set-auto-mode))
-  (goto-char (point-min)))
+
+  (let ((buffer (get-buffer coffee-compiled-buffer-name)))
+    (display-buffer buffer)
+    (with-current-buffer buffer
+      (let ((buffer-file-name "tmp.js")) (set-auto-mode)))))
 
 (defun coffee-js2coffee-replace-region (start end)
   "Convert JavaScript in the region into CoffeeScript."
@@ -434,8 +447,12 @@ For details, see `comment-dwim'."
 
 (defun coffee-command-compile (file-name)
   "Run `coffee-command' to compile FILE."
-  (let ((full-file-name (expand-file-name file-name)))
-    (mapconcat 'identity (append (list coffee-command) coffee-args-compile (list full-file-name)) " ")))
+  (let (
+	(full-file-name
+	 (expand-file-name file-name))
+	(output-directory
+	 (concat " -o " (file-name-directory (expand-file-name file-name)) coffee-js-directory)))
+    (mapconcat 'identity (append (list coffee-command) coffee-args-compile (list output-directory) (list full-file-name)) " ")))
 
 (defun coffee-run-cmd (args)
   "Run `coffee-command' with the given arguments, and display the
@@ -784,6 +801,65 @@ previous line."
 
 (defun coffee-post-command-function ()
   (setq coffee-indent-happened nil))
+
+(defun coffee-indent-shift-amount (start end dir)
+  "Compute distance to the closest increment of `coffee-tab-width'."
+  (let ((min most-positive-fixnum) rem)
+    (save-excursion
+      (goto-char start)
+      (while (< (point) end)
+        (let ((current (current-indentation)))
+          (when (< current min) (setq min current)))
+        (forward-line))
+      (setq rem (% min coffee-tab-width))
+      (if (zerop rem)
+          coffee-tab-width
+        (cond ((eq dir 'left) rem)
+              ((eq dir 'right) (- coffee-tab-width rem))
+              (t 0))))))
+
+(defun coffee-indent-shift-left (start end &optional count)
+  "Shift lines contained in region START END by COUNT columns to the left.
+If COUNT is not given, indents to the closest increment of
+`coffee-tab-width'. If region isn't active, the current line is
+shifted. The shifted region includes the lines in which START and
+END lie. An error is signaled if any lines in the region are
+indented less than COUNT columns."
+  (interactive
+   (if mark-active
+       (list (region-beginning) (region-end) current-prefix-arg)
+     (list (line-beginning-position) (line-end-position) current-prefix-arg)))
+  (let ((amount (if count (prefix-numeric-value count)
+                  (coffee-indent-shift-amount start end 'left))))
+    (when (> amount 0)
+      (let (deactivate-mark)
+        (save-excursion
+          (goto-char start)
+          ;; Check that all lines can be shifted enough
+          (while (< (point) end)
+            (if (and (< (current-indentation) amount)
+                     (not (looking-at "[ \t]*$")))
+                (error "Can't shift all lines enough"))
+            (forward-line))
+          (indent-rigidly start end (- amount)))))))
+
+(add-to-list 'debug-ignored-errors "^Can't shift all lines enough")
+
+(defun coffee-indent-shift-right (start end &optional count)
+  "Shift lines contained in region START END by COUNT columns to the right.
+if COUNT is not given, indents to the closest increment of
+`coffee-tab-width'. If region isn't active, the current line is
+shifted. The shifted region includes the lines in which START and
+END lie."
+  (interactive
+   (if mark-active
+       (list (region-beginning) (region-end) current-prefix-arg)
+     (list (line-beginning-position) (line-end-position) current-prefix-arg)))
+  (let (deactivate-mark
+        (amount (if count (prefix-numeric-value count)
+                  (coffee-indent-shift-amount start end 'right))))
+    (indent-rigidly start end amount)))
+
 
 ;;
 ;; Define Major Mode
