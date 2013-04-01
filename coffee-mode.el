@@ -865,7 +865,7 @@ END lie."
 ;; Define Major Mode
 ;;
 
-(defvar coffee-syntax-table
+(defvar coffee-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; perl style comment: "# ..."
     (modify-syntax-entry ?# "< b" st)
